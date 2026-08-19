@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="ad.size" content="width=360,height=640"><title>Spicy McNuggets — Heat-Hold</title>
+<link rel="stylesheet" href="style.css"><script>var clickTag="https://www.mcdonalds.com/";</script>
+</head><body>
+<div class="ad" id="ad" data-idea="heat-hold">
+  <div class="topbar"><img class="arches" src="assets/arches.png" alt="McDonald's"><span class="idea-tag">04 · Heat-Hold</span></div>
+  <div class="particles" id="sparks"></div>
+  <section class="screen" id="intro">
+    <div class="copy"><div class="kicker">Spicy McNuggets</div><h1>How long<br>can you hold it?</h1>
+      <p class="sub">Press and hold. The glow, sizzle and haptic intensity build together.</p>
+      <div class="actions"><button class="primary" id="start">Start challenge</button></div>
+      <p class="hint">Release when the heat gets too much. Your time becomes your score.</p>
+    </div>
+    <div class="hero"><img src="assets/presentation-state-1.png" alt="Heat-Hold concept artwork"></div>
+  </section>
+
+  <section class="screen" id="play" hidden>
+    <div class="copy"><div class="kicker">Press + hold</div><h1 id="timer">00:00.0</h1>
+      <p class="sub" id="instruction">Hold your finger on the nugget.</p>
+      <div class="meter-wrap"><div class="meter-labels"><span>Heat level</span><span id="heatText">0%</span></div>
+        <div class="meter heat" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="heatFill"></i></div>
+        <div class="status" id="status">Ready.</div>
+      </div>
+    </div>
+    <button class="hero hold-hero" id="holdTarget" aria-label="Press and hold the spicy nugget">
+      <img src="assets/hero-fire.jpg" alt="Spicy McNugget glowing with heat"><div class="hold-ring"></div>
+    </button>
+  </section>
+
+  <section class="screen" id="result" hidden>
+    <div class="result-card"><div class="kicker">You lasted</div><div class="big-number" id="score">0.0s</div><div class="badge" id="badge">Heat Rookie</div>
+      <h2 id="resultTitle">Not bad.</h2><p id="resultCopy">Try again and beat your score.</p>
+      <div class="actions"><button class="primary" id="claim">Claim reward</button><button class="secondary" id="replay">Beat my score</button></div>
+    </div>
+  </section>
+  <div class="footer"><div class="privacy">Touch + sound + device haptics where supported</div></div><div id="toast" class="toast" hidden></div>
+</div><script src="core.js"></script><script src="app.js"></script></body></html>
