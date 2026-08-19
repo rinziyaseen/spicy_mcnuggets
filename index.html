@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="ad.size" content="width=320,height=480">
+<meta name="format-detection" content="telephone=no">
+<title>Spicy McNuggets — Sensor Rich Media Banner</title>
+<style>
+  :root{ --red:#DA291C; --red2:#a81d12; --yellow:#FFC72C; --orange:#FF6A13; --ink:#141414; }
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
+  html,body{ height:100%; overflow:hidden; background:#000; overscroll-behavior:none; touch-action:none;
+    font-family:"Helvetica Neue",-apple-system,BlinkMacSystemFont,Arial,sans-serif; }
+
+  /* The ad frame — behaves like an expanded rich-media unit */
+  #unit{ position:relative; width:100vw; height:100vh; max-width:520px; max-height:940px; margin:0 auto;
+    background:linear-gradient(180deg,#e4392b 0%, var(--red) 48%, var(--red2) 100%); overflow:hidden; }
+  canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; z-index:1; }
+  video{ position:absolute; width:2px; height:2px; top:-10px; left:-10px; opacity:0.01; pointer-events:none; }
+
+  /* Chrome (close + ad label) */
+  #close{ position:absolute; top:10px; right:10px; z-index:60; width:34px; height:34px; border-radius:50%;
+    background:rgba(0,0,0,.4); color:#fff; border:none; font-size:18px; line-height:34px; cursor:pointer; }
+  #back{ position:absolute; top:10px; left:10px; z-index:60; width:34px; height:34px; border-radius:50%;
+    background:rgba(0,0,0,.4); color:#fff; border:none; font-size:20px; line-height:34px; cursor:pointer; display:none; }
+  #back.on{ display:block; }
+  .adlabel{ position:absolute; bottom:6px; left:0; right:0; text-align:center; z-index:60; font-size:9px;
+    letter-spacing:.14em; color:rgba(255,255,255,.5); font-weight:700; }
+
+  /* Overlays (screens) */
+  .screen{ position:absolute; inset:0; z-index:40; display:none; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; padding:32px 26px; color:#fff; }
+  .screen.on{ display:flex; }
+  .brandtag{ font-size:11px; font-weight:800; letter-spacing:.24em; text-transform:uppercase; color:var(--yellow); }
+  h1{ font-size:46px; font-weight:900; line-height:.9; text-transform:uppercase; margin:8px 0 2px; text-shadow:0 3px 0 rgba(0,0,0,.16); }
+  h1 em{ font-style:normal; color:var(--yellow); }
+  h2{ font-size:32px; font-weight:900; text-transform:uppercase; line-height:.95; }
+  h2 em{ font-style:normal; color:var(--yellow); }
+  .p{ font-size:14.5px; line-height:1.5; margin-top:14px; max-width:300px; opacity:.96; }
+  .p b{ color:var(--yellow); }
+  .emoji{ font-size:58px; margin-bottom:4px; }
+  .btn{ margin-top:22px; background:var(--yellow); color:#111; font-weight:900; font-size:15px; letter-spacing:.02em;
+    padding:15px 30px; border:none; border-radius:100px; cursor:pointer; box-shadow:0 7px 0 #c99a12; text-transform:uppercase; }
+  .btn:active{ transform:translateY(4px); box-shadow:0 3px 0 #c99a12; }
+  .btn.ghost{ background:transparent; color:#fff; border:2px solid rgba(255,255,255,.75); box-shadow:none; margin-top:12px; padding:11px 24px; font-size:12px; }
+  .btn:disabled{ opacity:.5; box-shadow:none; }
+  .menu{ display:flex; flex-direction:column; gap:12px; width:100%; max-width:330px; margin-top:22px; }
+  .tile{ display:flex; align-items:center; gap:14px; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.22);
+    border-radius:16px; padding:15px 16px; cursor:pointer; }
+  .tile:active{ background:rgba(255,255,255,.2); }
+  .tile .ic{ width:46px; height:46px; border-radius:12px; background:var(--yellow); color:#111; font-size:24px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .tile .nm{ font-size:17px; font-weight:800; text-align:left; }
+  .tile .ds{ font-size:11.5px; opacity:.85; text-align:left; margin-top:2px; }
+  .coupon{ background:#fff; color:#111; border-radius:16px; padding:18px 26px; margin-top:10px; box-shadow:0 12px 30px rgba(0,0,0,.35); }
+  .coupon .off{ font-size:46px; font-weight:900; color:var(--red); line-height:1; }
+  .coupon .lbl{ font-size:10px; letter-spacing:.16em; font-weight:800; color:#777; text-transform:uppercase; margin-top:5px; }
+  .facering{ position:absolute; z-index:30; border:3px dashed rgba(255,255,255,.6); border-radius:50%; pointer-events:none; display:none; }
+</style>
+</head>
+<body>
+<div id="unit">
+  <canvas id="c"></canvas>
+  <video id="vid" playsinline webkit-playsinline muted autoplay></video>
+  <div class="facering" id="facering"></div>
+
+  <!-- SPLASH -->
+  <div class="screen on" id="s_splash">
+    <div class="brandtag">Spicy McNuggets · Rich media</div>
+    <h1>HANDLE<br>THE <em>SPICE</em></h1>
+    <div class="p">An ad your phone can actually feel. Pick one — your <b>voice</b> or your <b>face</b>.</div>
+    <button class="btn" id="splashBtn">Start</button>
+    <div class="p" style="font-size:11px;opacity:.6;margin-top:16px">Best on a phone · needs mic / camera permission</div>
+  </div>
+
+  <!-- MENU -->
+  <div class="screen" id="s_menu">
+    <h2>Choose your <em>heat</em></h2>
+    <div class="menu">
+      <div class="tile" data-open="voice"><div class="ic">🔊</div><div><div class="nm">Cool It — with your voice</div><div class="ds">Blow or yell to put the fire out.</div></div></div>
+      <div class="tile" data-open="cam"><div class="ic">😅</div><div><div class="nm">The Sweat Cam (AR)</div><div class="ds">Your face, live, with the heat added on.</div></div></div>
+    </div>
+    <button class="btn ghost" data-home="1" style="margin-top:20px">Back</button>
+  </div>
+
+  <!-- PERMISSION / INTRO (voice) -->
+  <div class="screen" id="s_voiceIntro">
+    <div class="emoji">🔥</div>
+    <h2>Cool It <em>Down</em></h2>
+    <div class="p">The nugget's on fire. <b>Blow at your phone</b> or <b>yell</b> — both put it out. Fill the bar to win.</div>
+    <button class="btn" id="voiceAllow">Allow mic &amp; start</button>
+    <button class="btn ghost" data-home="1">Back</button>
+  </div>
+
+  <!-- PERMISSION / INTRO (cam) -->
+  <div class="screen" id="s_camIntro">
+    <div class="emoji">😅</div>
+    <h2>The Sweat <em>Cam</em></h2>
+    <div class="p">Center your face in the ring and keep cool. Watch the screen add the burn — live, like a filter.</div>
+    <button class="btn" id="camAllow">Allow camera &amp; start</button>
+    <button class="btn ghost" data-home="1">Back</button>
+  </div>
+
+  <!-- DENIED -->
+  <div class="screen" id="s_denied">
+    <div class="emoji">🎙️</div>
+    <h2>Need <em>permission</em></h2>
+    <div class="p" id="deniedMsg">To feel this one, allow access when your browser asks. You can still play the tap version.</div>
+    <button class="btn" id="deniedFallback">Play tap version</button>
+    <button class="btn ghost" data-home="1">Back to menu</button>
+  </div>
+
+  <!-- END -->
+  <div class="screen" id="s_end">
+    <div class="emoji" id="endEmoji">😎</div>
+    <h2 id="endTitle">COOLED IT!</h2>
+    <div class="p" id="endMsg"></div>
+    <div id="endCoupon" style="display:none" class="coupon"><div class="off">20% OFF</div><div class="lbl">Spicy McNuggets</div></div>
+    <button class="btn" id="endCta">Order now</button>
+    <button class="btn ghost" id="endShare" style="display:none" disabled>Share — coming soon</button>
+    <button class="btn ghost" id="endRetry">Play again</button>
+    <button class="btn ghost" data-home="1">All ideas</button>
+  </div>
+
+  <button id="back">‹</button>
+  <button id="close">×</button>
+  <div class="adlabel">ADVERTISEMENT · PROTOTYPE</div>
+</div>
+
+<script>
+/* =====================================================================
+   SPICY McNUGGETS — Sensor rich-media banner
+   Units: (1) Voice "Cool It" — blow OR yell, via microphone
+          (2) Sweat Cam — live selfie feed with an AR heat/sweat filter
+   Cross-browser hardened. MRAID + clickTag aware. Mobile-first.
+   ===================================================================== */
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------
+   0. Rich-media plumbing (clickTag / MRAID / close)
+   --------------------------------------------------------------- */
+var CLICK_URL = "https://www.mcdonalds.com";          // <-- replace before trafficking
+function clickThrough(){
+  try{ if(window.mraid && typeof mraid.open === "function"){ mraid.open(CLICK_URL); return; } }catch(e){}
+  window.open(CLICK_URL, "_blank");
+}
+function closeAd(){
+  try{ if(window.mraid && typeof mraid.close === "function"){ mraid.close(); return; } }catch(e){}
+  goHome(); // outside MRAID there's nothing to close — return to splash
+}
+
+/* ---------------------------------------------------------------
+   1. Cross-browser feature shims
+   --------------------------------------------------------------- */
+var AudioCtx = window.AudioContext || window.webkitAudioContext || null;
+function getUserMediaCompat(constraints){
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  var legacy = navigator.getUserMedia || navigator.webkitGetUserMedia ||
+               navigator.mozGetUserMedia || navigator.msGetUserMedia;
+  if(!legacy) return Promise.reject(new Error("getUserMedia unsupported"));
+  return new Promise(function(resolve,reject){ legacy.call(navigator, constraints, resolve, reject); });
+}
+var canVibrate = ("vibrate" in navigator);
+function vibrate(pattern){ try{ if(canVibrate) navigator.vibrate(pattern); }catch(e){} }
+var RAF = window.requestAnimationFrame || function(cb){ return setTimeout(function(){cb(Date.now());},16); };
+
+/* ---------------------------------------------------------------
+   2. Canvas + hi-DPI sizing
+   --------------------------------------------------------------- */
+var unit = document.getElementById("unit");
+var cv   = document.getElementById("c");
+var ctx  = cv.getContext("2d");
+var vid  = document.getElementById("vid");
+var facering = document.getElementById("facering");
+var W=0, H=0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+function resize(){
+  var r = unit.getBoundingClientRect();
+  W = r.width; H = r.height;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", function(){ setTimeout(resize,150); });
+
+/* ---------------------------------------------------------------
+   3. Small SFX (sizzle ticks) — optional, gesture-initialised
+   --------------------------------------------------------------- */
+var sfxCtx = null;
+function sfxInit(){ try{ if(!sfxCtx && AudioCtx) sfxCtx = new AudioCtx(); if(sfxCtx && sfxCtx.state==="suspended") sfxCtx.resume(); }catch(e){} }
+function sfxTick(freq){
+  try{ if(!sfxCtx) return;
+    var o=sfxCtx.createOscillator(), g=sfxCtx.createGain();
+    o.type="triangle"; o.frequency.value=freq||520;
+    g.gain.setValueAtTime(0.0001, sfxCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, sfxCtx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, sfxCtx.currentTime+0.12);
+    o.connect(g).connect(sfxCtx.destination); o.start(); o.stop(sfxCtx.currentTime+0.13);
+  }catch(e){}
+}
+
+/* ---------------------------------------------------------------
+   4. Microphone engine  (blow vs. yell classification)
+   --------------------------------------------------------------- */
+var Mic = {
+  ready:false, stream:null, actx:null, analyser:null, time:null, freq:null,
+  noiseFloor:0.02, calibN:0, calibSum:0, calibrated:false
+};
+function micStart(){
+  if(!AudioCtx) return Promise.resolve(false);
+  return getUserMediaCompat({audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}})
+    .then(function(stream){
+      Mic.stream = stream;
+      Mic.actx   = new AudioCtx();
+      if(Mic.actx.state==="suspended"){ try{ Mic.actx.resume(); }catch(e){} }
+      var src = Mic.actx.createMediaStreamSource(stream);
+      Mic.analyser = Mic.actx.createAnalyser();
+      Mic.analyser.fftSize = 1024;
+      Mic.analyser.smoothingTimeConstant = 0.6;
+      src.connect(Mic.analyser);
+      Mic.time = new Uint8Array(Mic.analyser.fftSize);
+      Mic.freq = new Uint8Array(Mic.analyser.frequencyBinCount);
+      Mic.ready = true; Mic.calibrated=false; Mic.calibN=0; Mic.calibSum=0;
+      return true;
+    })
+    .catch(function(){ return false; });
+}
+function micStop(){
+  try{ if(Mic.stream) Mic.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  try{ if(Mic.actx) Mic.actx.close(); }catch(e){}
+  Mic.ready=false; Mic.stream=null; Mic.actx=null; Mic.analyser=null;
+}
+/* returns {level 0..1, low 0..1, blowing, yelling} */
+function micRead(){
+  if(!Mic.ready) return {level:0, low:0, blowing:false, yelling:false};
+  Mic.analyser.getByteTimeDomainData(Mic.time);
+  var sum=0, i, v;
+  for(i=0;i<Mic.time.length;i++){ v=(Mic.time[i]-128)/128; sum+=v*v; }
+  var rms = Math.sqrt(sum/Mic.time.length);
+
+  // rolling noise-floor calibration for the first ~40 frames
+  if(!Mic.calibrated){ Mic.calibSum+=rms; Mic.calibN++;
+    if(Mic.calibN>=40){ Mic.noiseFloor = Math.max(0.015, Mic.calibSum/Mic.calibN); Mic.calibrated=true; } }
+
+  // low-band energy ratio (breath = lots of low-frequency turbulence)
+  Mic.analyser.getByteFrequencyData(Mic.freq);
+  var binHz = Mic.actx.sampleRate / Mic.analyser.fftSize;
+  var lowBins = Math.max(1, Math.floor(500/binHz));   // < ~500 Hz
+  var lowE=0, totE=0;
+  for(i=0;i<Mic.freq.length;i++){ totE+=Mic.freq[i]; if(i<lowBins) lowE+=Mic.freq[i]; }
+  var lowRatio = totE>0 ? lowE/totE : 0;
+
+  var over  = rms - Mic.noiseFloor;
+  var level = Math.max(0, Math.min(1, over*4));        // normalised loudness
+  var active = over > 0.03;
+  var blowing = active && lowRatio > 0.5 && level > 0.12;
+  var yelling = active && !blowing && level > 0.28;
+  return {level:level, low:lowRatio, blowing:blowing, yelling:yelling};
+}
+
+/* ---------------------------------------------------------------
+   5. Camera engine
+   --------------------------------------------------------------- */
+var Cam = { ready:false, stream:null };
+function camStart(){
+  return getUserMediaCompat({video:{facingMode:"user", width:{ideal:640}, height:{ideal:480}}, audio:false})
+    .then(function(stream){
+      Cam.stream = stream; vid.srcObject = stream;
+      var pr = vid.play();
+      if(pr && pr.catch) pr.catch(function(){});
+      Cam.ready = true; return true;
+    })
+    .catch(function(){ return false; });
+}
+function camStop(){
+  try{ if(Cam.stream) Cam.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  Cam.ready=false; Cam.stream=null; try{ vid.srcObject=null; }catch(e){}
+}
+
+/* ---------------------------------------------------------------
+   6. Draw helpers
+   --------------------------------------------------------------- */
+function lerp(a,b,t){ return a+(b-a)*t; }
+function clamp01(x){ return x<0?0:(x>1?1:x); }
+function roundRect(x,y,w,h,fill){ var r=h/2; if(w<r*2) r=Math.max(0,w/2); ctx.fillStyle=fill;
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
+function meter(x,y,w,h,val,fill,label){ roundRect(x,y,w,h,"rgba(0,0,0,.28)"); roundRect(x,y,w*clamp01(val),h,fill);
+  if(label){ ctx.fillStyle="rgba(255,255,255,.9)"; ctx.font="800 10px Helvetica Neue,Arial"; ctx.textAlign="left"; ctx.fillText(label,x,y+h+13); } }
+function drawNugget(x,y,r,coolT){
+  var top ="rgb("+Math.round(lerp(255,255,coolT))+","+Math.round(lerp(150,215,coolT))+","+Math.round(lerp(70,120,coolT))+")";
+  var mid ="rgb("+Math.round(lerp(255,232,coolT))+","+Math.round(lerp(80,163,coolT))+","+Math.round(lerp(20,60,coolT))+")";
+  var edge="rgb("+Math.round(lerp(200,185,coolT))+","+Math.round(lerp(30,120,coolT))+","+Math.round(lerp(15,45,coolT))+")";
+  ctx.save();
+  ctx.shadowColor="rgba(255,"+Math.round(60+120*(1-coolT))+",0,.9)"; ctx.shadowBlur=lerp(46,14,coolT);
+  var g=ctx.createRadialGradient(x-r*.3,y-r*.35,r*.2,x,y,r*1.05);
+  g.addColorStop(0,top); g.addColorStop(.6,mid); g.addColorStop(1,edge); ctx.fillStyle=g;
+  ctx.beginPath(); var pts=10,i,a,rr,px,py;
+  for(i=0;i<=pts;i++){ a=i/pts*Math.PI*2; rr=r*(1+.09*Math.sin(a*3+y*.01));
+    px=x+Math.cos(a)*rr*1.15; py=y+Math.sin(a)*rr*.9; if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+  ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.fillStyle="rgba(255,255,255,.35)"; ctx.beginPath(); ctx.ellipse(x-r*.35,y-r*.4,r*.28,r*.16,-.5,0,7); ctx.fill();
+}
+function drawFlames(cx,baseY,intensity,scatter,spread){
+  var n=7,i; spread=spread||34;
+  for(i=0;i<n;i++){ var off=(i-(n-1)/2);
+    var fx=cx+off*(spread*.5)+off*scatter*44;
+    var hh=(52+Math.random()*22)*intensity*(1-Math.abs(off)/6.5);
+    if(hh<4) continue;
+    var fg=ctx.createLinearGradient(0,baseY,0,baseY-hh);
+    fg.addColorStop(0,"#FFC72C"); fg.addColorStop(.5,"#FF6A13"); fg.addColorStop(1,"#DA291C");
+    ctx.globalAlpha=Math.max(.2,1-Math.abs(scatter)*.7); roundRect(fx-6,baseY-hh,12,hh,fg); }
+  ctx.globalAlpha=1;
+}
+/* AR heat-haze: draw the mirrored video in horizontal bands, each offset by a sine wave */
+function drawVideoHaze(heat){
+  if(!Cam.ready || vid.readyState < 2) return false;
+  var vw=vid.videoWidth, vh=vid.videoHeight; if(!vw) return false;
+  var scale=Math.max(W/vw, H/vh), dw=vw*scale, dh=vh*scale, dx=(W-dw)/2, dy=(H-dh)/2;
+  var bands=22, bh=H/bands, amp=(2+heat*10);
+  var tnow=(Date.now()%100000)/1000;
+  ctx.save(); ctx.translate(W,0); ctx.scale(-1,1);   // mirror (selfie)
+  for(var b=0;b<bands;b++){
+    var oy=b*bh;
+    var off=Math.sin(tnow*3 + b*0.6)*amp;
+    // source rect maps this destination band back into the video
+    var sBandH = (bh/dh)*vh;
+    var sy = ((oy-dy)/dh)*vh;
+    ctx.drawImage(vid, 0, sy, vw, sBandH, off, oy, dw, bh+1);
+  }
+  ctx.restore();
+  return true;
+}
+
+/* ---------------------------------------------------------------
+   7. Screen router
+   --------------------------------------------------------------- */
+var screens = {
+  splash:document.getElementById("s_splash"),
+  menu:document.getElementById("s_menu"),
+  voiceIntro:document.getElementById("s_voiceIntro"),
+  camIntro:document.getElementById("s_camIntro"),
+  denied:document.getElementById("s_denied"),
+  end:document.getElementById("s_end")
+};
+var backBtn=document.getElementById("back");
+var active=null;                 // current running experience (has update/draw/onDown/onUp)
+function show(name){ for(var k in screens) screens[k].classList.toggle("on", k===name); }
+function hideScreens(){ for(var k in screens) screens[k].classList.remove("on"); }
+function stopAll(){ active=null; micStop(); camStop(); facering.style.display="none"; }
+function goHome(){ stopAll(); show("splash"); backBtn.classList.remove("on"); ctx.clearRect(0,0,W,H); }
+function goMenu(){ stopAll(); show("menu"); backBtn.classList.add("on"); ctx.clearRect(0,0,W,H); }
+
+/* ---------------------------------------------------------------
+   8. Main loop
+   --------------------------------------------------------------- */
+var lastT=0;
+function loop(ts){
+  var dt=Math.min(0.05,(ts-(lastT||ts))/1000); lastT=ts;
+  if(active){ if(active.update) active.update(dt); ctx.clearRect(0,0,W,H); if(active.draw) active.draw(); }
+  RAF(loop);
+}
+RAF(loop);
+
+/* ---------------------------------------------------------------
+   9. End card helper
+   --------------------------------------------------------------- */
+function endCard(opt){
+  stopAllKeepScreen();
+  document.getElementById("endEmoji").textContent = opt.emoji;
+  document.getElementById("endTitle").innerHTML   = opt.title;
+  document.getElementById("endMsg").innerHTML     = opt.msg;
+  document.getElementById("endCoupon").style.display = opt.win ? "block" : "none";
+  document.getElementById("endShare").style.display  = opt.share ? "inline-block" : "none";
+  document.getElementById("endCta").textContent = opt.win ? "Claim & order" : "Order anyway";
+  currentRetry = opt.retry;
+  show("end"); backBtn.classList.add("on");
+}
+function stopAllKeepScreen(){ active=null; micStop(); camStop(); facering.style.display="none"; }
+var currentRetry=null;
+
+/* ===============================================================
+   EXPERIENCE A — VOICE: blow OR yell to put the fire out
+   =============================================================== */
+function startVoice(){
+  sfxInit();
+  micStart().then(function(ok){
+    if(!ok){ document.getElementById("deniedMsg").innerHTML =
+      "We couldn't get the mic. Allow it in your browser, or play the tap version."; deniedTarget="voice"; show("denied"); return; }
+    runVoice(false);
+  });
+}
+function runVoice(tapMode){
+  hideScreens(); backBtn.classList.add("on");
+  var cool=0, flame=1, scatter=0, level=0, mode="";
+  active = {
+    onDown:function(){ if(tapMode){ scatter=1; flame=Math.max(.12,flame-0.14); cool=clamp01(cool+0.05); level=1; vibrate(12); sfxTick(480);} },
+    onUp:function(){},
+    update:function(dt){
+      if(!tapMode){
+        var m=micRead(); level=lerp(level, m.level, 0.5);
+        if(m.blowing || m.yelling){
+          mode = m.blowing ? "BLOWING" : "YELLING";
+          scatter=clamp01(scatter+dt*3); flame=Math.max(.1,flame-dt*(m.blowing?1.7:1.5));
+          cool=clamp01(cool + dt*(0.45+m.level*0.4));
+        } else { mode=""; scatter=Math.max(0,scatter-dt*2.2); flame=Math.min(1,flame+dt*0.6); }
+      } else { level=Math.max(0,level-dt*3); scatter=Math.max(0,scatter-dt*2.5); flame=Math.min(1,flame+dt*0.45); }
+      if(cool>=1){ vibrate([20,40,60]); endCard({emoji:"😎",title:"COOLED IT!",msg:"You put the fire out. Reward unlocked.",win:true,retry:startVoice}); }
+    },
+    draw:function(){
+      var cx=W/2, baseY=H*0.62, r=Math.min(W,H)*0.13;
+      // live input ring (shows the mic is really listening)
+      if(!tapMode){
+        ctx.strokeStyle="rgba(255,199,44,"+(0.25+level*0.6).toFixed(2)+")"; ctx.lineWidth=3+level*10;
+        ctx.beginPath(); ctx.arc(cx, H*0.86, 26+level*30, 0, 7); ctx.stroke();
+        ctx.fillStyle="rgba(255,255,255,.9)"; ctx.font="800 11px Helvetica Neue,Arial"; ctx.textAlign="center";
+        ctx.fillText("🎤", cx, H*0.86+4);
+      }
+      drawNugget(cx, baseY-r*0.2, r, cool);
+      drawFlames(cx, baseY+r*0.72, flame, scatter);
+      meter(24,26,W-48,12,cool,"#FFC72C","COOL — FILL IT TO WIN");
+      ctx.textAlign="center"; ctx.fillStyle="#fff"; ctx.font="900 17px Helvetica Neue,Arial";
+      var prompt = tapMode ? "TAP FAST to fan it out"
+                 : (mode==="BLOWING" ? "KEEP BLOWING 💨" : (mode==="YELLING" ? "LOUDER! 🔊" : "BLOW or YELL to cool it"));
+      ctx.fillText(prompt, W/2, H*0.94);
+    }
+  };
+}
+
+/* ===============================================================
+   EXPERIENCE B — SWEAT CAM (AR heat/sweat filter over live video)
+   =============================================================== */
+function startCam(){
+  sfxInit();
+  camStart().then(function(ok){
+    if(!ok){ document.getElementById("deniedMsg").innerHTML =
+      "We couldn't get the camera. Allow it in your browser to try the AR filter."; deniedTarget="cam"; show("denied"); return; }
+    runCam();
+  });
+}
+function runCam(){
+  hideScreens(); backBtn.classList.add("on");
+  var phase="count", cd=3, heat=0, t=0, drops=[], i;
+  for(i=0;i<14;i++) drops.push({ x:Math.random(), y:Math.random(), r:2+Math.random()*3.5, sp:0.06+Math.random()*0.10 });
+  // face guide ring
+  var ringR=Math.min(W,H)*0.32;
+  facering.style.width=facering.style.height=(ringR*2)+"px";
+  facering.style.left=(W/2-ringR)+"px"; facering.style.top=(H*0.42-ringR)+"px";
+  facering.style.display="block";
+
+  active = {
+    onDown:function(){},
+    update:function(dt){ t+=dt;
+      if(phase==="count"){ cd-=dt; if(cd<=0) phase="heat"; }
+      else if(phase==="heat"){ heat=clamp01(heat+dt*0.22); if(heat>=1){ phase="done"; facering.style.display="none"; vibrate(30);
+        endCard({emoji:"🥵",title:"Your <em>#SpiceFace</em>",msg:"That look is the Spicy McNuggets effect.",win:false,share:true,retry:startCam}); } }
+    },
+    draw:function(){
+      var hasVid=drawVideoHaze(heat);
+      if(!hasVid){ ctx.fillStyle="#20140f"; ctx.fillRect(0,0,W,H);
+        drawNugget(W/2,H*0.42,Math.min(W,H)*0.16,1-heat);
+        ctx.fillStyle="#fff"; ctx.font="800 13px Helvetica Neue,Arial"; ctx.textAlign="center";
+        ctx.fillText("Starting camera…",W/2,H*0.72); }
+      // red heat wash
+      if(heat>0){ ctx.fillStyle="rgba(218,41,28,"+(heat*0.38).toFixed(2)+")"; ctx.fillRect(0,0,W,H); }
+      // cheek blushes (approx face thirds)
+      if(heat>0.05){ var by=H*0.5, bx=W*0.5, off=W*0.16, rr=W*0.16*(0.7+heat*0.5);
+        [ -1, 1 ].forEach(function(s){ var g=ctx.createRadialGradient(bx+s*off,by,4,bx+s*off,by,rr);
+          g.addColorStop(0,"rgba(255,40,20,"+(heat*0.5).toFixed(2)+")"); g.addColorStop(1,"rgba(255,40,20,0)");
+          ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bx+s*off,by,rr,0,7); ctx.fill(); }); }
+      // sweat beads sliding down (denser with heat)
+      for(i=0;i<drops.length;i++){ var d=drops[i]; d.y += d.sp*(0.3+heat)*0.02; if(d.y>1){ d.y=-0.05; d.x=Math.random(); }
+        if(i > drops.length*(1-heat)) continue;
+        ctx.fillStyle="rgba(191,227,255,"+(0.35+heat*0.45).toFixed(2)+")";
+        ctx.beginPath(); ctx.ellipse(d.x*W,(d.y*0.55+0.12)*H,d.r,d.r*1.6,0,0,7); ctx.fill(); }
+      // steam wisps top
+      ctx.globalAlpha=0.15+heat*0.2;
+      for(i=0;i<4;i++){ var sx=W*(0.2+i*0.2)+Math.sin(t*1.5+i)*14; ctx.fillStyle="#fff";
+        ctx.beginPath(); ctx.arc(sx, H*0.08+Math.sin(t+i)*6, 10+heat*8, 0, 7); ctx.fill(); }
+      ctx.globalAlpha=1;
+      // HUD
+      if(phase==="count"){ ctx.fillStyle="#fff"; ctx.font="900 92px Helvetica Neue,Arial"; ctx.textAlign="center";
+        ctx.textBaseline="middle"; ctx.fillText(Math.max(1,Math.ceil(cd)), W/2, H*0.42); ctx.textBaseline="alphabetic";
+        ctx.font="800 14px Helvetica Neue,Arial"; ctx.fillText("Center your face in the ring", W/2, H*0.42+ringR+28); }
+      else { meter(24,24,W-48,12,heat,"#FFC72C","HEAT");
+        ctx.fillStyle="#FFC72C"; ctx.font="900 20px Helvetica Neue,Arial"; ctx.textAlign="center";
+        ctx.fillText(heat<0.5?"Feeling warm yet? 🥵":"HOLD IT…", W/2, H*0.93); }
+    }
+  };
+}
+
+/* ---------------------------------------------------------------
+   10. Wire up UI
+   --------------------------------------------------------------- */
+var deniedTarget="voice";
+document.getElementById("splashBtn").addEventListener("click", function(){ sfxInit(); resize(); goMenu(); });
+document.getElementById("voiceAllow").addEventListener("click", startVoice);
+document.getElementById("camAllow").addEventListener("click", startCam);
+document.getElementById("deniedFallback").addEventListener("click", function(){ if(deniedTarget==="voice"){ runVoice(true); } else { goMenu(); } });
+document.getElementById("endCta").addEventListener("click", clickThrough);
+document.getElementById("endRetry").addEventListener("click", function(){ if(currentRetry) currentRetry(); });
+document.getElementById("close").addEventListener("click", closeAd);
+backBtn.addEventListener("click", goMenu);
+
+// menu tiles + any [data-home]
+document.body.addEventListener("click", function(e){
+  var open=e.target.closest("[data-open]"); if(open){ var m=open.getAttribute("data-open");
+    if(m==="voice") show("voiceIntro"); else if(m==="cam") show("camIntro"); backBtn.classList.add("on"); return; }
+  var hb=e.target.closest("[data-home]"); if(hb){ goMenu(); }
+});
+
+// pointer routing to active experience
+function ptr(e){ var r=cv.getBoundingClientRect(), t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left, y:t.clientY-r.top}; }
+cv.addEventListener("touchstart", function(e){ if(active&&active.onDown){ e.preventDefault(); active.onDown(ptr(e)); } }, {passive:false});
+cv.addEventListener("touchend",   function(e){ if(active&&active.onUp){ e.preventDefault(); active.onUp(); } }, {passive:false});
+cv.addEventListener("mousedown",  function(e){ if(active&&active.onDown) active.onDown(ptr(e)); });
+window.addEventListener("mouseup",function(){ if(active&&active.onUp) active.onUp(); });
+document.addEventListener("touchmove", function(e){ if(active) e.preventDefault(); }, {passive:false});
+
+// pause audio/vibe when tab hidden
+document.addEventListener("visibilitychange", function(){ if(document.hidden){ try{ if(Mic.actx) Mic.actx.suspend(); }catch(e){} } });
+
+/* ---------------------------------------------------------------
+   11. Boot (MRAID-aware)
+   --------------------------------------------------------------- */
+function boot(){ resize(); show("splash"); }
+if(window.mraid){
+  if(mraid.getState && mraid.getState()==="loading") mraid.addEventListener("ready", boot);
+  else boot();
+} else boot();
+})();
+</script>
+</body>
+</html>
